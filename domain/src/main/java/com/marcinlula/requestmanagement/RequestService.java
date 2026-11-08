@@ -1,12 +1,14 @@
 package com.marcinlula.requestmanagement;
 
+import com.marcinlula.requestmanagement.exception.InvalidRequestDataException;
+import com.marcinlula.requestmanagement.exception.InvalidRequestStateException;
+import com.marcinlula.requestmanagement.exception.RequestNotFoundException;
 import com.marcinlula.requestmanagement.model.Request;
 import com.marcinlula.requestmanagement.model.RequestState;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.NoSuchElementException;
 import java.util.UUID;
 
 import static com.marcinlula.requestmanagement.model.RequestState.*;
@@ -33,7 +35,7 @@ public class RequestService {
     public Request changeBody(UUID id, String body) {
         Request request = get(id);
         if (request.state() != CREATED && request.state() != VERIFIED) {
-            throw new IllegalStateException("Body can only be modified in CREATED or VERIFIED state");
+            throw new InvalidRequestStateException("Body can only be modified in CREATED or VERIFIED state");
         }
         require(body, "Body is required");
         return repository.save(request.withBody(body));
@@ -70,7 +72,8 @@ public class RequestService {
 
     @Transactional(readOnly = true)
     public Request get(UUID id) {
-        return repository.findById(id).orElseThrow(() -> new NoSuchElementException("Request " + id + " not found"));
+        return repository.findById(id)
+                .orElseThrow(() -> new RequestNotFoundException(id));
     }
 
     private Request transition(UUID id, RequestState target, String reason) {
@@ -81,13 +84,13 @@ public class RequestService {
 
     private void checkTransition(Request request, RequestState target) {
         if (!request.state().allowedTargets().contains(target)) {
-            throw new IllegalStateException("Transition from " + request.state() + " to " + target + " is not allowed");
+            throw new InvalidRequestStateException("Transition from " + request.state() + " to " + target + " is not allowed");
         }
     }
 
     private static void require(String value, String message) {
         if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(message);
+            throw new InvalidRequestDataException(message);
         }
     }
 }

@@ -1,4 +1,4 @@
-package com.marcinlula.requestmanagement.dto;
+package com.marcinlula.requestmanagement.api.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

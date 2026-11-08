@@ -1,4 +1,4 @@
-package com.marcinlula.requestmanagement.dto;
+package com.marcinlula.requestmanagement.api.dto;
 
 import com.marcinlula.requestmanagement.model.RequestState;
 import jakarta.validation.constraints.NotBlank;

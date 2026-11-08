@@ -1,9 +1,10 @@
-package com.marcinlula.requestmanagement;
+package com.marcinlula.requestmanagement.api;
 
-import com.marcinlula.requestmanagement.dto.CreateRequestDto;
-import com.marcinlula.requestmanagement.dto.ReasonDto;
-import com.marcinlula.requestmanagement.dto.UpdateBodyDto;
-import com.marcinlula.requestmanagement.dto.RequestDto;
+import com.marcinlula.requestmanagement.RequestService;
+import com.marcinlula.requestmanagement.api.dto.CreateRequestDto;
+import com.marcinlula.requestmanagement.api.dto.ReasonDto;
+import com.marcinlula.requestmanagement.api.dto.UpdateBodyDto;
+import com.marcinlula.requestmanagement.api.dto.RequestDto;
 import com.marcinlula.requestmanagement.model.Request;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -47,26 +48,31 @@ public class RequestController {
 
     @PostMapping("/{id}/verify")
     public RequestDto verify(@PathVariable UUID id) {
-        return mapper.map(requestService.verify(id));
+        Request request = requestService.verify(id);
+        return mapper.map(request);
     }
 
     @PostMapping("/{id}/accept")
     public RequestDto accept(@PathVariable UUID id) {
-        return mapper.map(requestService.accept(id));
+        Request request = requestService.accept(id);
+        return mapper.map(request);
     }
 
     @PostMapping("/{id}/publish")
     public RequestDto publish(@PathVariable UUID id) {
-        return mapper.map(requestService.publish(id));
+        Request request = requestService.publish(id);
+        return mapper.map(request);
     }
 
     @PostMapping("/{id}/reject")
-    public RequestDto reject(@PathVariable UUID id, @Valid @RequestBody ReasonDto request) {
-        return mapper.map(requestService.reject(id, request.reason()));
+    public RequestDto reject(@PathVariable UUID id, @Valid @RequestBody ReasonDto reason) {
+        Request request = requestService.reject(id, reason.reason());
+        return mapper.map(request);
     }
 
     @PostMapping("/{id}/delete")
     public RequestDto delete(@PathVariable UUID id, @Valid @RequestBody ReasonDto reason) {
-        return mapper.map(requestService.delete(id, reason.reason()));
+        Request request = requestService.delete(id, reason.reason());
+        return mapper.map(request);
     }
 }

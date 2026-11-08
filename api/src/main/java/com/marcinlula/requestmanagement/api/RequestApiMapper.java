@@ -1,6 +1,6 @@
-package com.marcinlula.requestmanagement;
+package com.marcinlula.requestmanagement.api;
 
-import com.marcinlula.requestmanagement.dto.RequestDto;
+import com.marcinlula.requestmanagement.api.dto.RequestDto;
 import com.marcinlula.requestmanagement.model.Request;
 import org.mapstruct.Mapper;
 
