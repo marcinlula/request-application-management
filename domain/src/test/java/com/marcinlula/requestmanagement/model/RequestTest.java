@@ -22,6 +22,40 @@ class RequestTest {
     }
 
     @Test
+    void whenCreate_thenHistoryContainsInitialStateChange() {
+        //given
+        //when
+        Request request = Request.create("name", "body");
+
+        //then
+        assertThat(request.history()).hasSize(1);
+        StateChange first = request.history().getFirst();
+        assertThat(first.from()).isNull();
+        assertThat(first.to()).isEqualTo(RequestState.CREATED);
+        assertThat(first.reason()).isNull();
+        assertThat(first.at()).isNotNull();
+    }
+
+    @Test
+    void whenChangeState_thenStateReasonAndHistoryAreUpdatedAndOriginalIsIntact() {
+        //given
+        Request original = Request.create("name", "body");
+
+        //when
+        Request changed = original.changeState(RequestState.DELETED, "duplicate");
+
+        //then
+        assertThat(changed.state()).isEqualTo(RequestState.DELETED);
+        assertThat(changed.reason()).isEqualTo("duplicate");
+        assertThat(changed.history()).hasSize(2);
+        assertThat(changed.history().getLast())
+                .extracting(StateChange::from, StateChange::to, StateChange::reason)
+                .containsExactly(RequestState.CREATED, RequestState.DELETED, "duplicate");
+        assertThat(original.state()).isEqualTo(RequestState.CREATED);
+        assertThat(original.history()).hasSize(1);
+    }
+
+    @Test
     void whenCreateTwice_thenIdsAreDistinct() {
         //given
         //when

@@ -1,6 +1,8 @@
 package com.marcinlula.requestmanagement;
 
 import com.marcinlula.requestmanagement.model.Request;
+import com.marcinlula.requestmanagement.model.StateChange;
+import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
@@ -21,6 +23,8 @@ class RequestRepositoryImplTest {
     private RequestRepositoryImpl repository;
     @Autowired
     private RequestJpaRepository jpaRepository;
+    @Autowired
+    private TestEntityManager entityManager;
     @Autowired
     private SequencePublicationNumberGenerator numberGenerator;
 
@@ -62,6 +66,42 @@ class RequestRepositoryImplTest {
 
         //then
         assertThat(repository.findById(request.id()).orElseThrow().publicationNumber()).isEqualTo(42L);
+    }
+
+    @Test
+    void whenSaveRequestWithStateChanges_thenHistoryIsPersistedInOrder() {
+        //given
+        Request request = Request.create("name", "body");
+        Request verified = request.changeState(VERIFIED, null);
+
+        //when
+        repository.save(request);
+        repository.save(verified);
+        entityManager.flush();
+        entityManager.clear();
+
+        //then
+        Request found = repository.findById(request.id()).orElseThrow();
+        assertThat(found.history()).isEqualTo(verified.history());
+        assertThat(found.history()).extracting(StateChange::to).containsExactly(CREATED, VERIFIED);
+    }
+
+    @Test
+    void whenSaveAgainWithMoreStateChanges_thenOnlyNewEntriesAreAppended() {
+        //given
+        Request request = repository.save(Request.create("name", "body"));
+        Request rejected = request.changeState(VERIFIED, null).changeState(REJECTED, "bad");
+
+        //when
+        repository.save(rejected);
+        entityManager.flush();
+        entityManager.clear();
+
+        //then
+        assertThat(entityManager.getEntityManager()
+                .createQuery("select count(c) from StateChangeEntity c", Long.class).getSingleResult()).isEqualTo(3);
+        assertThat(repository.findById(request.id()).orElseThrow().history())
+                .extracting(StateChange::to).containsExactly(CREATED, VERIFIED, REJECTED);
     }
 
     @Test

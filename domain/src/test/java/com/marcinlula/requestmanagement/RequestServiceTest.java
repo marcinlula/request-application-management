@@ -5,6 +5,7 @@ import com.marcinlula.requestmanagement.exception.InvalidRequestStateException;
 import com.marcinlula.requestmanagement.exception.RequestNotFoundException;
 import com.marcinlula.requestmanagement.model.Request;
 import com.marcinlula.requestmanagement.model.RequestState;
+import com.marcinlula.requestmanagement.model.StateChange;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,6 +42,88 @@ class RequestServiceTest {
     void setUp() {
         lenient().when(repository.save(any(Request.class))).thenAnswer(i -> i.getArgument(0));
         service = new RequestService(repository, numberGenerator);
+    }
+
+    @Test
+    void whenReject_thenStateChangeWithReasonIsAppendedToHistory() {
+        //given
+        Request request = getRequest(VERIFIED);
+
+        //when
+        Request rejected = service.reject(request.id(), " bad ");
+
+        //then
+        assertThat(rejected.history()).hasSize(request.history().size() + 1);
+        StateChange last = rejected.history().getLast();
+        assertThat(last.from()).isEqualTo(VERIFIED);
+        assertThat(last.to()).isEqualTo(REJECTED);
+        assertThat(last.reason()).isEqualTo("bad");
+        assertThat(last.at()).isNotNull();
+    }
+
+    @Test
+    void whenPublish_thenStateChangeIsAppendedToHistory() {
+        //given
+        Request request = getRequest(ACCEPTED);
+        when(numberGenerator.next()).thenReturn(1L);
+
+        //when
+        Request published = service.publish(request.id());
+
+        //then
+        StateChange last = published.history().getLast();
+        assertThat(last.from()).isEqualTo(ACCEPTED);
+        assertThat(last.to()).isEqualTo(PUBLISHED);
+    }
+
+    @Test
+    void whenChangeBody_thenHistoryIsNotChanged() {
+        //given
+        Request request = getRequest(CREATED);
+
+        //when
+        Request changed = service.changeBody(request.id(), "new");
+
+        //then
+        assertThat(changed.history()).isEqualTo(request.history());
+    }
+
+    @Test
+    void whenTransitionFails_thenHistoryIsNotSaved() {
+        //given
+        Request request = getRequest(PUBLISHED);
+
+        //when
+        var thrown = assertThatThrownBy(() -> service.verify(request.id()));
+
+        //then
+        thrown.isInstanceOf(InvalidRequestStateException.class);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void whenGetHistory_thenHistoryOfRequestIsReturned() {
+        //given
+        Request request = getRequest(CREATED);
+
+        //when
+        var history = service.getHistory(request.id());
+
+        //then
+        assertThat(history).isEqualTo(request.history());
+    }
+
+    @Test
+    void whenGetHistoryOfUnknownRequest_thenRequestNotFoundExceptionIsThrown() {
+        //given
+        UUID id = UUID.randomUUID();
+        when(repository.findById(id)).thenReturn(Optional.empty());
+
+        //when
+        var thrown = assertThatThrownBy(() -> service.getHistory(id));
+
+        //then
+        thrown.isInstanceOf(RequestNotFoundException.class);
     }
 
     private Request getRequest(RequestState state) {

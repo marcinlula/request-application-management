@@ -5,10 +5,12 @@ import com.marcinlula.requestmanagement.exception.InvalidRequestStateException;
 import com.marcinlula.requestmanagement.exception.RequestNotFoundException;
 import com.marcinlula.requestmanagement.model.Request;
 import com.marcinlula.requestmanagement.model.RequestState;
+import com.marcinlula.requestmanagement.model.StateChange;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 import static com.marcinlula.requestmanagement.model.RequestState.*;
@@ -67,7 +69,8 @@ public class RequestService {
     public Request publish(UUID id) {
         Request request = get(id);
         checkTransition(request, PUBLISHED);
-        return repository.save(request.withPublicationNumber(numberGenerator.next()).withState(PUBLISHED));
+        long publicationNumber = numberGenerator.next();
+        return repository.save(request.withPublicationNumber(publicationNumber).changeState(PUBLISHED, null));
     }
 
     @Transactional(readOnly = true)
@@ -76,10 +79,15 @@ public class RequestService {
                 .orElseThrow(() -> new RequestNotFoundException(id));
     }
 
+    @Transactional(readOnly = true)
+    public List<StateChange> getHistory(UUID id) {
+        return get(id).history();
+    }
+
     private Request transition(UUID id, RequestState target, String reason) {
         Request request = get(id);
         checkTransition(request, target);
-        return repository.save(request.withState(target).withReason(reason));
+        return repository.save(request.changeState(target, reason));
     }
 
     private void checkTransition(Request request, RequestState target) {

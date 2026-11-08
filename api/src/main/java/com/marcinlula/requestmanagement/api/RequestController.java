@@ -3,6 +3,7 @@ package com.marcinlula.requestmanagement.api;
 import com.marcinlula.requestmanagement.RequestService;
 import com.marcinlula.requestmanagement.api.dto.CreateRequestDto;
 import com.marcinlula.requestmanagement.api.dto.ReasonDto;
+import com.marcinlula.requestmanagement.api.dto.StateChangeDto;
 import com.marcinlula.requestmanagement.api.dto.UpdateBodyDto;
 import com.marcinlula.requestmanagement.api.dto.RequestDto;
 import com.marcinlula.requestmanagement.model.Request;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -39,6 +41,11 @@ public class RequestController {
     public RequestDto get(@PathVariable UUID id) {
         Request request = requestService.get(id);
         return mapper.map(request);
+    }
+
+    @GetMapping("/{id}/history")
+    public List<StateChangeDto> history(@PathVariable UUID id) {
+        return mapper.mapHistory(requestService.getHistory(id));
     }
 
     @PatchMapping("/{id}")

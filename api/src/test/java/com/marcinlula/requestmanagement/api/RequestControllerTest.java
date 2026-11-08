@@ -98,6 +98,38 @@ class RequestControllerTest {
     }
 
     @Test
+    void whenGetHistory_thenStateChangesAreReturned() throws Exception {
+        //given
+        Request request = Request.create("name", "body").changeState(REJECTED, "bad");
+        when(service.getHistory(request.id())).thenReturn(request.history());
+
+        //when
+        var result = mockMvc.perform(get(URL + "/" + request.id() + "/history"));
+
+        //then
+        result.andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].from").doesNotExist())
+                .andExpect(jsonPath("$[0].to").value("CREATED"))
+                .andExpect(jsonPath("$[1].from").value("CREATED"))
+                .andExpect(jsonPath("$[1].to").value("REJECTED"))
+                .andExpect(jsonPath("$[1].reason").value("bad"));
+    }
+
+    @Test
+    void whenGetHistoryOfUnknownRequest_thenNotFoundIsReturned() throws Exception {
+        //given
+        UUID id = UUID.randomUUID();
+        when(service.getHistory(id)).thenThrow(new RequestNotFoundException(id));
+
+        //when
+        var result = mockMvc.perform(get(URL + "/" + id + "/history"));
+
+        //then
+        result.andExpect(status().isNotFound());
+    }
+
+    @Test
     void whenGetUnknown_thenNotFoundIsReturned() throws Exception {
         //given
         UUID id = UUID.randomUUID();
