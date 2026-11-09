@@ -32,6 +32,28 @@ class RequestStateTest {
         assertThat(targets).containsExactlyInAnyOrder(expectedTargets);
     }
 
+    @ParameterizedTest
+    @EnumSource(value = RequestState.class, names = {"CREATED", "VERIFIED"})
+    void whenStateIsCreatedOrVerified_thenBodyChangeIsAllowed(RequestState state) {
+        //given
+        //when
+        boolean allowed = state.allowedBodyChange();
+
+        //then
+        assertThat(allowed).isTrue();
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = RequestState.class, names = {"ACCEPTED", "PUBLISHED", "DELETED", "REJECTED"})
+    void whenStateIsOther_thenBodyChangeIsNotAllowed(RequestState state) {
+        //given
+        //when
+        boolean allowed = state.allowedBodyChange();
+
+        //then
+        assertThat(allowed).isFalse();
+    }
+
     static Stream<Arguments> stateDiagram() {
         return Stream.of(
                 Arguments.of(CREATED, new RequestState[]{VERIFIED, DELETED}),

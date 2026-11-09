@@ -1,6 +1,9 @@
 package com.marcinlula.requestmanagement.model;
 
+import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public enum RequestState {
     CREATED, VERIFIED, ACCEPTED, PUBLISHED, DELETED, REJECTED;
@@ -10,7 +13,15 @@ public enum RequestState {
             case CREATED -> Set.of(VERIFIED, DELETED);
             case VERIFIED -> Set.of(ACCEPTED, REJECTED);
             case ACCEPTED -> Set.of(PUBLISHED, REJECTED);
-            case PUBLISHED, DELETED, REJECTED -> Set.of();
+            default -> Set.of();
         };
     }
+
+    public boolean allowedBodyChange() {
+        return switch (this) {
+            case CREATED, VERIFIED -> true;
+            default -> false;
+        };
+    }
+
 }

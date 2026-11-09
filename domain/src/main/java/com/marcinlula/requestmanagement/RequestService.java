@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static com.marcinlula.requestmanagement.model.RequestState.*;
 
@@ -36,10 +37,10 @@ public class RequestService {
     @Transactional
     public Request changeBody(UUID id, String body) {
         Request request = get(id);
-        if (request.state() != CREATED && request.state() != VERIFIED) {
-            throw new InvalidRequestStateException("Body can only be modified in CREATED or VERIFIED state");
-        }
         require(body, "Body is required");
+        if (!request.state().allowedBodyChange()) {
+            throw new InvalidRequestStateException("Body can not be modified in " + request.state() + " state");
+        }
         return repository.save(request.withBody(body));
     }
 
