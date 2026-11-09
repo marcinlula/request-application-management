@@ -7,6 +7,8 @@ import com.marcinlula.requestmanagement.model.Request;
 import com.marcinlula.requestmanagement.model.RequestState;
 import com.marcinlula.requestmanagement.model.StateChange;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -78,6 +80,11 @@ public class RequestService {
     public Request get(UUID id) {
         return repository.findById(id)
                 .orElseThrow(() -> new RequestNotFoundException(id));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Request> list(String name, RequestState state, Pageable pageable) {
+        return repository.search(name, state, pageable);
     }
 
     @Transactional(readOnly = true)

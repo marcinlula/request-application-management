@@ -14,8 +14,13 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -124,6 +129,20 @@ class RequestServiceTest {
 
         //then
         thrown.isInstanceOf(RequestNotFoundException.class);
+    }
+
+    @Test
+    void whenList_thenRepositoryPageIsReturned() {
+        //given
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Request> expected = new PageImpl<>(List.of(Request.create("name", "body")));
+        when(repository.search("na", CREATED, pageable)).thenReturn(expected);
+
+        //when
+        Page<Request> result = service.list("na", CREATED, pageable);
+
+        //then
+        assertThat(result).isSameAs(expected);
     }
 
     private Request getRequest(RequestState state) {

@@ -7,6 +7,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.UUID;
@@ -102,6 +104,63 @@ class RequestRepositoryImplTest {
                 .createQuery("select count(c) from StateChangeEntity c", Long.class).getSingleResult()).isEqualTo(3);
         assertThat(repository.findById(request.id()).orElseThrow().history())
                 .extracting(StateChange::to).containsExactly(CREATED, VERIFIED, REJECTED);
+    }
+
+    @Test
+    void whenSearchWithoutFilters_thenRequestsAreReturnedPaged() {
+        //given
+        for (int i = 1; i <= 5; i++) {
+            repository.save(Request.create("req" + i, "body"));
+        }
+
+        //when
+        var page = repository.search(null, null, PageRequest.of(1, 2, Sort.by("id")));
+
+        //then
+        assertThat(page.getContent()).extracting(Request::name).containsExactly("req3", "req4");
+        assertThat(page.getTotalElements()).isEqualTo(5);
+        assertThat(page.getTotalPages()).isEqualTo(3);
+    }
+
+    @Test
+    void whenSearchByName_thenMatchIsCaseInsensitiveAndPartial() {
+        //given
+        repository.save(Request.create("Annual Report", "b"));
+        repository.save(Request.create("report draft", "b"));
+        repository.save(Request.create("Invoice", "b"));
+
+        //when
+        var page = repository.search("REPORT", null, PageRequest.of(0, 10, Sort.by("id")));
+
+        //then
+        assertThat(page.getContent()).extracting(Request::name).containsExactly("Annual Report", "report draft");
+    }
+
+    @Test
+    void whenSearchByState_thenOnlyRequestsInThatStateAreReturned() {
+        //given
+        repository.save(Request.create("a", "b"));
+        Request verified = repository.save(Request.create("c", "d").changeState(VERIFIED, null));
+
+        //when
+        var page = repository.search(null, VERIFIED, PageRequest.of(0, 10));
+
+        //then
+        assertThat(page.getContent()).extracting(Request::id).containsExactly(verified.id());
+    }
+
+    @Test
+    void whenSearchByNameAndState_thenBothFiltersApply() {
+        //given
+        repository.save(Request.create("report", "b"));
+        Request match = repository.save(Request.create("report 2", "b").changeState(VERIFIED, null));
+        repository.save(Request.create("other", "b").changeState(VERIFIED, null));
+
+        //when
+        var page = repository.search("report", VERIFIED, PageRequest.of(0, 10));
+
+        //then
+        assertThat(page.getContent()).extracting(Request::id).containsExactly(match.id());
     }
 
     @Test

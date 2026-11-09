@@ -6,17 +6,25 @@ import com.marcinlula.requestmanagement.exception.InvalidRequestStateException;
 import com.marcinlula.requestmanagement.exception.RequestNotFoundException;
 import com.marcinlula.requestmanagement.model.Request;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.List;
 import java.util.UUID;
 
 import static com.marcinlula.requestmanagement.model.RequestState.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -127,6 +135,53 @@ class RequestControllerTest {
 
         //then
         result.andExpect(status().isNotFound());
+    }
+
+    @Test
+    void whenListWithoutParams_thenFirstPageOfTenIsRequested() throws Exception {
+        //given
+        Request request = Request.create("name", "body");
+        when(service.list(eq(null), eq(null), any(Pageable.class))).thenReturn(new PageImpl<>(List.of(request)));
+
+        //when
+        var result = mockMvc.perform(get(URL));
+
+        //then
+        result.andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(request.id().toString()))
+                .andExpect(jsonPath("$.page.size").value(1));
+        ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
+        verify(service).list(eq(null), eq(null), captor.capture());
+        assertThat(captor.getValue().getPageNumber()).isZero();
+        assertThat(captor.getValue().getPageSize()).isEqualTo(10);
+    }
+
+    @Test
+    void whenListWithFilters_thenTheyArePassedToService() throws Exception {
+        //given
+        when(service.list(eq("abc"), eq(VERIFIED), any(Pageable.class))).thenReturn(new PageImpl<>(List.of()));
+
+        //when
+        var result = mockMvc.perform(get(URL).param("name", "abc").param("state", "VERIFIED")
+                .param("page", "2").param("size", "5"));
+
+        //then
+        result.andExpect(status().isOk());
+        ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
+        verify(service).list(eq("abc"), eq(VERIFIED), captor.capture());
+        assertThat(captor.getValue().getPageNumber()).isEqualTo(2);
+        assertThat(captor.getValue().getPageSize()).isEqualTo(5);
+    }
+
+    @Test
+    void whenListWithUnknownState_thenBadRequestIsReturned() throws Exception {
+        //given
+        //when
+        var result = mockMvc.perform(get(URL).param("state", "UNKNOWN"));
+
+        //then
+        result.andExpect(status().isBadRequest());
+        verifyNoInteractions(service);
     }
 
     @Test

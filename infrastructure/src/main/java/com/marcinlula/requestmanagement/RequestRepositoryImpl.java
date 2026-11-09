@@ -1,7 +1,12 @@
 package com.marcinlula.requestmanagement;
 
 import com.marcinlula.requestmanagement.model.Request;
+import com.marcinlula.requestmanagement.model.RequestState;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Example;
+import org.springframework.data.domain.ExampleMatcher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -21,6 +26,17 @@ class RequestRepositoryImpl implements RequestRepository {
         appendNewStateChanges(request, entity);
         RequestEntity savedEntity = jpaRepository.save(entity);
         return mapper.toDomain(savedEntity);
+    }
+
+    @Override
+    public Page<Request> search(String name, RequestState state, Pageable pageable) {
+        RequestEntity probe = new RequestEntity();
+        probe.setName(name);
+        probe.setState(state);
+        probe.setHistory(null);
+        ExampleMatcher matcher = ExampleMatcher.matching()
+                .withMatcher("name", match -> match.contains().ignoreCase());
+        return jpaRepository.findAll(Example.of(probe, matcher), pageable).map(mapper::toDomain);
     }
 
     // The history is append-only: only add the entries that are not stored yet.
