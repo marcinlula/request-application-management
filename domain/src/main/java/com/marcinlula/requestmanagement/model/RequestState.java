@@ -1,9 +1,6 @@
 package com.marcinlula.requestmanagement.model;
 
-import java.util.Arrays;
-import java.util.EnumSet;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public enum RequestState {
     CREATED, VERIFIED, ACCEPTED, PUBLISHED, DELETED, REJECTED;
